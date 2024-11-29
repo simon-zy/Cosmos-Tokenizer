@@ -81,7 +81,19 @@ class Patcher(torch.nn.Module):
         hh = hh.to(dtype=dtype)
         hl = hl.to(dtype=dtype)
 
+        # Fix shape for onnx export
+        int_g = int(g)
+        hl = hl.reshape([int_g, 1, -1])
+        hh = hh.reshape([int_g, 1, -1])
+
+        # Fix shape for onnx export
+        h_delta = n - 2 + n - 1
+        w_delta = n - 2 + n - 1
+        shape = [x.shape[0], x.shape[1], x.shape[2]+h_delta, x.shape[3]+w_delta]
+        shape = tuple(int(x) for x in shape)
         x = F.pad(x, pad=(n - 2, n - 1, n - 2, n - 1), mode=mode).to(dtype)
+        x = torch.reshape(x, shape)
+        
         xl = F.conv2d(x, hl.unsqueeze(2), groups=g, stride=(1, 2))
         xh = F.conv2d(x, hh.unsqueeze(2), groups=g, stride=(1, 2))
         xll = F.conv2d(xl, hl.unsqueeze(3), groups=g, stride=(2, 1))
